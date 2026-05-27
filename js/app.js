@@ -175,7 +175,12 @@ async function startAR() {
     showToast("Error: A-Frame no cargó. Revisa tu conexión.", "warning");
     return;
   }
-  if (!AFRAME.components["arjs"]) {
+  // AR.js puede registrarse como system o component según el build
+  const arjsLoaded =
+    (AFRAME.systems && AFRAME.systems["arjs"]) ||
+    (AFRAME.components && AFRAME.components["arjs"]) ||
+    typeof THREEx !== "undefined";
+  if (!arjsLoaded) {
     showToast("Error: AR.js no cargó. Revisa tu conexión.", "warning");
     return;
   }
