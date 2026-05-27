@@ -252,6 +252,12 @@ async function startAR() {
   document.body.classList.add("ar-active");
 
   // 3. Inyecta la escena AR sólo ahora (tras gesto y permiso concedido).
+  // IMPORTANTE: AR.js NFT NO resuelve rutas relativas en subpaths
+  // (ej. GitHub Pages). Usamos URL absoluta basada en la ubicación actual.
+  const baseURL = location.origin + location.pathname.replace(/[^/]*$/, "");
+  const markerUrl = baseURL + "markers/marcador_generico";
+  console.log("[AR] Marker URL absoluta:", markerUrl);
+
   const container = document.getElementById("ar-scene-container");
   if (!container.querySelector("a-scene")) {
     container.innerHTML = `
@@ -264,7 +270,7 @@ async function startAR() {
         <a-nft
           id="marker"
           type="nft"
-          url="markers/marcador_generico"
+          url="${markerUrl}"
           smooth="true"
           smoothCount="10"
           smoothTolerance="0.01"
