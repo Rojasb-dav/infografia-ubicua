@@ -194,9 +194,22 @@ img { max-width: 100%; display: block; }
   inset: 0;
   width: 100vw;
   height: 100vh;
-  background: #000;
+  /* Sin fondo: AR.js inserta un <video> en body con z-index:-2; si pintamos
+     fondo opaco aquí, taparía el feed de cámara. */
+  background: transparent;
   z-index: 1;
+  pointer-events: none; /* deja pasar gestos al canvas; los hijos los reactivan */
 }
+
+/* Reactivar eventos en los elementos interactivos del overlay */
+.ar-header,
+.nav-arrow,
+.ar-toolbar,
+.sheet,
+.sheet-overlay { pointer-events: auto; }
+
+/* Body negro mientras carga la cámara, para evitar flash blanco */
+body.ar-active { background: #000; }
 
 /* AR.js inserta un canvas/video; nos aseguramos de que llene la pantalla */
 .ar-screen a-scene,

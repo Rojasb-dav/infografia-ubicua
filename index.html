@@ -59,47 +59,10 @@
   <!-- ============================================================= -->
   <div id="ar-screen" class="ar-screen" style="display:none;">
 
-    <!-- Escena AR.js + A-Frame -->
-    <a-scene
-      vr-mode-ui="enabled: false"
-      embedded
-      arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
-      renderer="logarithmicDepthBuffer: true; precision: medium;">
-
-      <!-- Marcador NFT: AR.js carga automáticamente .iset, .fset y .fset3 -->
-      <a-nft
-        id="marker"
-        type="nft"
-        url="markers/marcador_generico"
-        smooth="true"
-        smoothCount="10"
-        smoothTolerance="0.01"
-        smoothThreshold="5">
-
-        <!-- Plano vertical del póster -->
-        <a-plane
-          id="poster-plane"
-          src="assets/poster_soporte.png"
-          position="0 0.5 0"
-          rotation="-90 0 0"
-          width="1"
-          height="1.5"
-          material="transparent: true; opacity: 1">
-        </a-plane>
-
-        <!-- Modelo 3D animado (rotación continua en eje Y) -->
-        <a-entity
-          id="model-3d"
-          gltf-model="assets/coin.glb"
-          position="0 1.5 0"
-          scale="0.3 0.3 0.3"
-          animation="property: rotation; to: 0 360 0; loop: true; dur: 3000; easing: linear">
-        </a-entity>
-
-      </a-nft>
-
-      <a-entity camera></a-entity>
-    </a-scene>
+    <!-- La escena AR se inyecta dinámicamente desde JS al iniciar la experiencia,
+         para que getUserMedia se solicite tras un gesto del usuario y para que
+         AR.js no inicialice mientras la pantalla está oculta. -->
+    <div id="ar-scene-container"></div>
 
     <!-- ----------- Overlay HTML (encima del canvas AR) ----------- -->
 

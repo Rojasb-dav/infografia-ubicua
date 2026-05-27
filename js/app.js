@@ -172,10 +172,65 @@ function clearAllSaved() {
 function startAR() {
   document.getElementById("welcome-screen").style.display = "none";
   document.getElementById("ar-screen").style.display = "block";
-  // Aplica el primer póster
+  document.body.classList.add("ar-active");
+
+  // Inyecta la escena AR sólo ahora (tras gesto del usuario), para que
+  // getUserMedia se invoque correctamente en móviles y AR.js no se
+  // inicialice mientras la pantalla está oculta (lo que da pantalla negra).
+  const container = document.getElementById("ar-scene-container");
+  if (!container.querySelector("a-scene")) {
+    container.innerHTML = `
+      <a-scene
+        vr-mode-ui="enabled: false"
+        embedded
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+        renderer="logarithmicDepthBuffer: true; precision: medium;">
+
+        <a-nft
+          id="marker"
+          type="nft"
+          url="markers/marcador_generico"
+          smooth="true"
+          smoothCount="10"
+          smoothTolerance="0.01"
+          smoothThreshold="5">
+
+          <a-plane
+            id="poster-plane"
+            src="${POSTERS[0].poster}"
+            position="0 0.5 0"
+            rotation="-90 0 0"
+            width="1"
+            height="1.5"
+            material="transparent: true; opacity: 1">
+          </a-plane>
+
+          <a-entity
+            id="model-3d"
+            gltf-model="${POSTERS[0].modelo3D}"
+            position="0 1.5 0"
+            scale="0.3 0.3 0.3"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 3000; easing: linear">
+          </a-entity>
+        </a-nft>
+
+        <a-entity camera></a-entity>
+      </a-scene>
+    `;
+
+    // Listeners AR cuando la escena haya cargado
+    const scene = container.querySelector("a-scene");
+    if (scene.hasLoaded) {
+      setupARListeners();
+    } else {
+      scene.addEventListener("loaded", setupARListeners);
+    }
+  }
+
+  // Aplica el primer póster (overlay HTML)
   applyPoster(0);
-  // Forza redimensionamiento del canvas AR (a veces es necesario)
-  window.dispatchEvent(new Event("resize"));
+  // Forza redimensionamiento (ayuda al canvas a calcular dimensiones)
+  setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
 }
 
 function exitAR() {
@@ -424,14 +479,4 @@ document.addEventListener("DOMContentLoaded", () => {
   // Bottom sheet
   document.getElementById("btn-close-sheet").addEventListener("click", closeSheet);
   document.getElementById("sheet-overlay").addEventListener("click", closeSheet);
-
-  // Listeners AR (cuando A-Frame haya inicializado)
-  const scene = document.querySelector("a-scene");
-  if (scene) {
-    if (scene.hasLoaded) {
-      setupARListeners();
-    } else {
-      scene.addEventListener("loaded", setupARListeners);
-    }
-  }
 });
