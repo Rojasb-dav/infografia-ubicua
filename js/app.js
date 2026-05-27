@@ -217,7 +217,7 @@ async function startAR() {
       <a-scene
         vr-mode-ui="enabled: false"
         embedded
-        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;"
         renderer="logarithmicDepthBuffer: true; precision: medium;">
 
         <a-nft
@@ -465,9 +465,25 @@ function actionContactar() {
    --------------------------------------------------------------- */
 function setupARListeners() {
   const marker = document.getElementById("marker");
-  if (!marker) return;
+  if (!marker) {
+    console.warn("[AR] No se encontró el elemento #marker");
+    return;
+  }
+
+  console.log("[AR] Listeners conectados al marcador NFT");
+
+  // Logs útiles para diagnosticar carga de archivos NFT
+  marker.addEventListener("nftLoaded", () => {
+    console.log("[AR] ✅ Archivos NFT cargados correctamente");
+    setMarkerStatus("📷 Apunta al marcador", false);
+  });
+  marker.addEventListener("arjs-nft-loaded", () => {
+    console.log("[AR] ✅ NFT inicializado");
+  });
 
   marker.addEventListener("markerFound", () => {
+    console.log("[AR] 🎯 Marcador detectado");
+    setMarkerStatus("✓ Marcador detectado", true);
     const plane = document.getElementById("poster-plane");
     const model = document.getElementById("model-3d");
     [plane, model].forEach((el) => {
@@ -479,8 +495,28 @@ function setupARListeners() {
   });
 
   marker.addEventListener("markerLost", () => {
-    // Opcional: aquí podríamos hacer fade-out
+    console.log("[AR] Marcador perdido");
+    setMarkerStatus("🔍 Buscando marcador...", false);
   });
+
+  // Verificación de que los archivos del marcador existen y son accesibles
+  ["iset", "fset", "fset3"].forEach((ext) => {
+    fetch("markers/marcador_generico." + ext, { method: "HEAD" })
+      .then((r) => {
+        if (!r.ok) console.error(`[AR] ❌ No se pudo cargar .${ext}: HTTP ${r.status}`);
+        else console.log(`[AR] ✓ .${ext} accesible (${r.headers.get("content-length")} bytes)`);
+      })
+      .catch((e) => console.error(`[AR] ❌ Error cargando .${ext}:`, e));
+  });
+}
+
+/** Actualiza el indicador de estado del marcador en pantalla */
+function setMarkerStatus(text, found) {
+  const el = document.getElementById("marker-status");
+  const txt = document.getElementById("marker-status-text");
+  if (!el || !txt) return;
+  txt.textContent = text;
+  el.classList.toggle("found", !!found);
 }
 
 /* ---------------------------------------------------------------

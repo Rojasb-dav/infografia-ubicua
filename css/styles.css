@@ -211,6 +211,30 @@ img { max-width: 100%; display: block; }
 /* Body negro mientras carga la cámara, para evitar flash blanco */
 body.ar-active { background: #000; }
 
+/* Indicador de estado del marcador */
+.marker-status {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 9;
+  pointer-events: none;
+  white-space: nowrap;
+  transition: background 0.3s ease;
+}
+.marker-status.found {
+  background: rgba(22, 163, 74, 0.9);
+}
+.marker-status.hidden {
+  display: none;
+}
+
 /* AR.js inserta un canvas/video; nos aseguramos de que llene la pantalla */
 .ar-screen a-scene,
 .ar-screen .a-canvas {
