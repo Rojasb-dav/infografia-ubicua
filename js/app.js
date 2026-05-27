@@ -264,7 +264,7 @@ async function startAR() {
       <a-scene
         vr-mode-ui="enabled: false"
         embedded
-        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;"
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
         renderer="logarithmicDepthBuffer: true; precision: medium;">
 
         <a-nft
