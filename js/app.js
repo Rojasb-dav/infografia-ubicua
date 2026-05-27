@@ -1,0 +1,437 @@
+/* ================================================================
+   Infografía Ubicua - Lógica principal
+   JavaScript vanilla. Sin frameworks.
+   ================================================================ */
+
+/* ---------------------------------------------------------------
+   1. DATOS DE LOS PÓSTERS
+   --------------------------------------------------------------- */
+const POSTERS = [
+  {
+    id: "soporte-001",
+    area: "SOPORTE",
+    color: "#1E40AF",
+    titulo: "Beca de Manutención 2026",
+    descripcion: "Apoyo económico mensual para estudiantes de bajos recursos con promedio mínimo de 8.0",
+    poster: "assets/poster_soporte.png",
+    modelo3D: "assets/coin.glb",
+    fechaLimite: "2026-06-30",
+    fechaLimiteTexto: "30 de junio de 2026",
+    requisitos: [
+      "Promedio mínimo de 8.0",
+      "Comprobante de ingresos familiares",
+      "Constancia de estudios vigente",
+      "CURP e INE",
+      "Carta de exposición de motivos"
+    ],
+    whatsapp: "5212345678900"
+  },
+  {
+    id: "bienestar-001",
+    area: "BIENESTAR",
+    color: "#15803D",
+    titulo: "Atención Psicológica Gratuita",
+    descripcion: "Sesiones individuales confidenciales sin costo para estudiantes activos",
+    poster: "assets/poster_bienestar.png",
+    modelo3D: "assets/heart.glb",
+    fechaLimite: "2026-12-31",
+    fechaLimiteTexto: "Inscripciones abiertas todo el semestre",
+    requisitos: [
+      "Ser estudiante activo",
+      "Agendar cita previa",
+      "Llenar formulario de valoración"
+    ],
+    whatsapp: "5212345678900"
+  },
+  {
+    id: "aprendizaje-001",
+    area: "APRENDIZAJE",
+    color: "#B45309",
+    titulo: "Tutorías Académicas Gratuitas",
+    descripcion: "Asesorías grupales semanales de matemáticas y programación impartidas por estudiantes avanzados certificados",
+    poster: "assets/poster_aprendizaje.png",
+    modelo3D: "assets/book.glb",
+    fechaLimite: "2026-05-20",
+    fechaLimiteTexto: "20 de mayo de 2026",
+    requisitos: [
+      "Registro previo en la plataforma",
+      "Asistencia mínima del 80%",
+      "Llevar material del curso"
+    ],
+    whatsapp: "5212345678900"
+  }
+];
+
+/* ---------------------------------------------------------------
+   2. ESTADO Y CONSTANTES
+   --------------------------------------------------------------- */
+let currentIndex = 0; // índice del póster actual
+
+const STORAGE_KEYS = {
+  saved: "oportunidades_guardadas",
+  checklist: (id) => "checklist_" + id
+};
+
+/* ---------------------------------------------------------------
+   3. UTILIDADES
+   --------------------------------------------------------------- */
+
+/** Obtiene el póster actualmente seleccionado */
+function getCurrentPoster() {
+  return POSTERS[currentIndex];
+}
+
+/** Lee un array desde localStorage de forma segura */
+function readStorageArray(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    console.warn("localStorage corrupto en", key, e);
+    return [];
+  }
+}
+
+/** Escribe un valor en localStorage */
+function writeStorage(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+/* ---------------------------------------------------------------
+   4. SISTEMA DE TOASTS
+   --------------------------------------------------------------- */
+function showToast(message, type = "info") {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
+  toast.className = "toast " + type;
+  toast.textContent = message;
+  container.appendChild(toast);
+  // Eliminar tras animación (~3s total)
+  setTimeout(() => toast.remove(), 3000);
+}
+
+/* ---------------------------------------------------------------
+   5. PANTALLA DE BIENVENIDA: oportunidades guardadas
+   --------------------------------------------------------------- */
+
+/** Renderiza la lista de oportunidades guardadas en la bienvenida */
+function renderSavedList() {
+  const list = document.getElementById("saved-list");
+  const btnClear = document.getElementById("btn-clear-saved");
+  const saved = readStorageArray(STORAGE_KEYS.saved);
+
+  list.innerHTML = "";
+
+  if (saved.length === 0) {
+    list.innerHTML = '<p class="saved-empty">Aún no has guardado ninguna oportunidad</p>';
+    btnClear.style.display = "none";
+    return;
+  }
+
+  // Crea una tarjeta por cada item guardado
+  saved.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "saved-item";
+    card.style.borderLeftColor = item.color;
+
+    card.innerHTML = `
+      <div class="saved-item-info">
+        <div class="saved-item-title">${item.titulo}</div>
+        <div class="saved-item-meta">${item.area} · ${item.fechaLimiteTexto}</div>
+      </div>
+      <button class="saved-item-remove" data-id="${item.id}" aria-label="Eliminar">×</button>
+    `;
+    list.appendChild(card);
+  });
+
+  // Listeners de eliminación individual
+  list.querySelectorAll(".saved-item-remove").forEach((btn) => {
+    btn.addEventListener("click", () => removeSavedItem(btn.dataset.id));
+  });
+
+  btnClear.style.display = "block";
+}
+
+/** Elimina una oportunidad por id */
+function removeSavedItem(id) {
+  const saved = readStorageArray(STORAGE_KEYS.saved).filter((x) => x.id !== id);
+  writeStorage(STORAGE_KEYS.saved, saved);
+  renderSavedList();
+}
+
+/** Limpia todas las oportunidades guardadas */
+function clearAllSaved() {
+  if (!confirm("¿Eliminar todas las oportunidades guardadas?")) return;
+  writeStorage(STORAGE_KEYS.saved, []);
+  renderSavedList();
+}
+
+/* ---------------------------------------------------------------
+   6. INICIO Y SALIDA DE LA EXPERIENCIA AR
+   --------------------------------------------------------------- */
+function startAR() {
+  document.getElementById("welcome-screen").style.display = "none";
+  document.getElementById("ar-screen").style.display = "block";
+  // Aplica el primer póster
+  applyPoster(0);
+  // Forza redimensionamiento del canvas AR (a veces es necesario)
+  window.dispatchEvent(new Event("resize"));
+}
+
+function exitAR() {
+  // Recargamos para liberar recursos de la cámara y AR.js de forma limpia
+  window.location.reload();
+}
+
+/* ---------------------------------------------------------------
+   7. APLICAR / NAVEGAR ENTRE PÓSTERS
+   --------------------------------------------------------------- */
+
+/** Aplica el póster en el índice indicado y actualiza UI + escena AR */
+function applyPoster(index) {
+  currentIndex = (index + POSTERS.length) % POSTERS.length;
+  const p = POSTERS[currentIndex];
+
+  // --- Escena AR ---
+  const plane = document.getElementById("poster-plane");
+  const model = document.getElementById("model-3d");
+
+  if (plane) {
+    plane.setAttribute("src", p.poster);
+    // Reaplica animación fade-in para transición suave
+    plane.classList.remove("ar-fade");
+    void plane.offsetWidth; // reflow para reiniciar animación CSS
+    plane.classList.add("ar-fade");
+  }
+  if (model) {
+    model.setAttribute("gltf-model", p.modelo3D);
+  }
+
+  // --- Overlay HTML ---
+  document.getElementById("poster-indicator").textContent =
+    (currentIndex + 1) + "/" + POSTERS.length;
+  document.getElementById("poster-area").textContent = p.area;
+
+  // Color de fondo de la toolbar (semitransparente)
+  const toolbar = document.getElementById("ar-toolbar");
+  toolbar.style.background = hexToRgba(p.color, 0.85);
+}
+
+/** Convierte un color hex (#rrggbb) a rgba con alpha dado */
+function hexToRgba(hex, alpha) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function nextPoster() { applyPoster(currentIndex + 1); }
+function prevPoster() { applyPoster(currentIndex - 1); }
+
+/* ---------------------------------------------------------------
+   8. ACCIONES DE LA TOOLBAR
+   --------------------------------------------------------------- */
+
+/** GUARDAR: añade la oportunidad actual al localStorage si no está */
+function actionGuardar() {
+  const p = getCurrentPoster();
+  const saved = readStorageArray(STORAGE_KEYS.saved);
+
+  if (saved.some((x) => x.id === p.id)) {
+    showToast("Ya estaba guardado", "warning");
+    return;
+  }
+
+  saved.push({
+    id: p.id,
+    area: p.area,
+    titulo: p.titulo,
+    fechaLimiteTexto: p.fechaLimiteTexto,
+    color: p.color
+  });
+  writeStorage(STORAGE_KEYS.saved, saved);
+  renderSavedList(); // por si la pantalla welcome vuelve a mostrarse
+  showToast("✓ Guardado en mis oportunidades", "success");
+}
+
+/** REQUISITOS: muestra el bottom sheet con la checklist persistida */
+function actionRequisitos() {
+  const p = getCurrentPoster();
+  const checked = readStorageArray(STORAGE_KEYS.checklist(p.id));
+
+  document.getElementById("sheet-title").textContent =
+    "📋 Requisitos - " + p.titulo;
+
+  const body = document.getElementById("sheet-body");
+  body.innerHTML = "";
+
+  p.requisitos.forEach((req, i) => {
+    const isChecked = checked.includes(i);
+    const label = document.createElement("label");
+    label.className = "requisito-item" + (isChecked ? " checked" : "");
+    label.innerHTML = `
+      <input type="checkbox" data-index="${i}" ${isChecked ? "checked" : ""} />
+      <span>${req}</span>
+    `;
+    body.appendChild(label);
+  });
+
+  // Listener para persistir cambios de checkbox
+  body.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const idx = parseInt(cb.dataset.index, 10);
+      let arr = readStorageArray(STORAGE_KEYS.checklist(p.id));
+      if (cb.checked) {
+        if (!arr.includes(idx)) arr.push(idx);
+        cb.parentElement.classList.add("checked");
+      } else {
+        arr = arr.filter((x) => x !== idx);
+        cb.parentElement.classList.remove("checked");
+      }
+      writeStorage(STORAGE_KEYS.checklist(p.id), arr);
+    });
+  });
+
+  document.getElementById("sheet-overlay").style.display = "block";
+  document.getElementById("requisitos-sheet").style.display = "flex";
+}
+
+function closeSheet() {
+  document.getElementById("sheet-overlay").style.display = "none";
+  document.getElementById("requisitos-sheet").style.display = "none";
+}
+
+/** RECORDATORIO: genera y descarga un .ics con la fecha límite */
+function actionRecordatorio() {
+  const p = getCurrentPoster();
+  // Convertir "2026-06-30" -> "20260630"
+  const dt = p.fechaLimite.replaceAll("-", "");
+  // Para evento de día completo, DTEND debe ser el día siguiente (RFC 5545)
+  const dtEnd = addOneDay(p.fechaLimite).replaceAll("-", "");
+
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Infografia Ubicua//ES",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    "UID:" + p.id + "@infografia-ubicua",
+    "DTSTAMP:" + formatDtStamp(new Date()),
+    "DTSTART;VALUE=DATE:" + dt,
+    "DTEND;VALUE=DATE:" + dtEnd,
+    "SUMMARY:Recordatorio - " + p.titulo,
+    "DESCRIPTION:" + p.descripcion,
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+
+  // Descarga del archivo
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "recordatorio-" + p.id + ".ics";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  showToast("📅 Recordatorio descargado", "success");
+}
+
+/** Suma 1 día a una fecha en formato YYYY-MM-DD */
+function addOneDay(yyyymmdd) {
+  const d = new Date(yyyymmdd + "T00:00:00");
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Formato YYYYMMDDTHHMMSSZ para DTSTAMP */
+function formatDtStamp(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return (
+    date.getUTCFullYear() +
+    pad(date.getUTCMonth() + 1) +
+    pad(date.getUTCDate()) + "T" +
+    pad(date.getUTCHours()) +
+    pad(date.getUTCMinutes()) +
+    pad(date.getUTCSeconds()) + "Z"
+  );
+}
+
+/** CONTACTAR: abre WhatsApp con mensaje pre-cargado */
+function actionContactar() {
+  const p = getCurrentPoster();
+  const msg = encodeURIComponent("Hola, quiero más información sobre " + p.titulo);
+  const url = `https://wa.me/${p.whatsapp}?text=${msg}`;
+  window.open(url, "_blank");
+}
+
+/* ---------------------------------------------------------------
+   9. EVENTOS DE AR (markerFound / markerLost)
+   --------------------------------------------------------------- */
+function setupARListeners() {
+  const marker = document.getElementById("marker");
+  if (!marker) return;
+
+  marker.addEventListener("markerFound", () => {
+    const plane = document.getElementById("poster-plane");
+    const model = document.getElementById("model-3d");
+    [plane, model].forEach((el) => {
+      if (!el) return;
+      el.classList.remove("ar-fade");
+      void el.offsetWidth;
+      el.classList.add("ar-fade");
+    });
+  });
+
+  marker.addEventListener("markerLost", () => {
+    // Opcional: aquí podríamos hacer fade-out
+  });
+}
+
+/* ---------------------------------------------------------------
+   10. INICIALIZACIÓN
+   --------------------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", () => {
+  // Pantalla de bienvenida
+  renderSavedList();
+
+  document.getElementById("btn-start-ar").addEventListener("click", startAR);
+  document.getElementById("btn-clear-saved").addEventListener("click", clearAllSaved);
+
+  // Pantalla AR
+  document.getElementById("btn-back").addEventListener("click", exitAR);
+  document.getElementById("btn-prev").addEventListener("click", prevPoster);
+  document.getElementById("btn-next").addEventListener("click", nextPoster);
+
+  // Toolbar de acciones
+  document.querySelectorAll("#ar-toolbar .toolbar-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      switch (btn.dataset.action) {
+        case "guardar":      actionGuardar(); break;
+        case "requisitos":   actionRequisitos(); break;
+        case "recordatorio": actionRecordatorio(); break;
+        case "contactar":    actionContactar(); break;
+      }
+    });
+  });
+
+  // Bottom sheet
+  document.getElementById("btn-close-sheet").addEventListener("click", closeSheet);
+  document.getElementById("sheet-overlay").addEventListener("click", closeSheet);
+
+  // Listeners AR (cuando A-Frame haya inicializado)
+  const scene = document.querySelector("a-scene");
+  if (scene) {
+    if (scene.hasLoaded) {
+      setupARListeners();
+    } else {
+      scene.addEventListener("loaded", setupARListeners);
+    }
+  }
+});
