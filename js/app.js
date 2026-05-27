@@ -169,14 +169,43 @@ function clearAllSaved() {
 /* ---------------------------------------------------------------
    6. INICIO Y SALIDA DE LA EXPERIENCIA AR
    --------------------------------------------------------------- */
-function startAR() {
+async function startAR() {
+  // 1. Diagnóstico: verificar que las librerías cargaron
+  if (typeof AFRAME === "undefined") {
+    showToast("Error: A-Frame no cargó. Revisa tu conexión.", "warning");
+    return;
+  }
+  if (!AFRAME.components["arjs"]) {
+    showToast("Error: AR.js no cargó. Revisa tu conexión.", "warning");
+    return;
+  }
+
+  // 2. Pedir permiso de cámara explícitamente (en el gesto del clic).
+  //    Esto garantiza que el prompt aparezca antes de que AR.js intente nada.
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false
+    });
+    // Liberamos el stream; AR.js abrirá el suyo.
+    stream.getTracks().forEach((t) => t.stop());
+  } catch (err) {
+    console.error("Error de cámara:", err);
+    if (err.name === "NotAllowedError") {
+      showToast("Permiso de cámara denegado", "warning");
+    } else if (err.name === "NotFoundError") {
+      showToast("No se encontró cámara en este dispositivo", "warning");
+    } else {
+      showToast("Cámara no disponible: " + err.name, "warning");
+    }
+    return;
+  }
+
   document.getElementById("welcome-screen").style.display = "none";
   document.getElementById("ar-screen").style.display = "block";
   document.body.classList.add("ar-active");
 
-  // Inyecta la escena AR sólo ahora (tras gesto del usuario), para que
-  // getUserMedia se invoque correctamente en móviles y AR.js no se
-  // inicialice mientras la pantalla está oculta (lo que da pantalla negra).
+  // 3. Inyecta la escena AR sólo ahora (tras gesto y permiso concedido).
   const container = document.getElementById("ar-scene-container");
   if (!container.querySelector("a-scene")) {
     container.innerHTML = `
