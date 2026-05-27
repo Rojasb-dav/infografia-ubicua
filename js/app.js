@@ -63,6 +63,47 @@ const POSTERS = [
 ];
 
 /* ---------------------------------------------------------------
+   1.5 PANEL DE LOGS EN PANTALLA (captura console.*)
+   --------------------------------------------------------------- */
+(function setupDebugPanel() {
+  const append = (level, args) => {
+    const panel = document.getElementById("debug-log");
+    if (!panel) return;
+    const line = document.createElement("div");
+    line.className = "log-line log-" + level;
+    const time = new Date().toLocaleTimeString();
+    line.textContent = `[${time}] ${args
+      .map((a) => {
+        if (a instanceof Error) return a.name + ": " + a.message;
+        if (typeof a === "object") {
+          try { return JSON.stringify(a); } catch (e) { return String(a); }
+        }
+        return String(a);
+      })
+      .join(" ")}`;
+    panel.appendChild(line);
+    panel.scrollTop = panel.scrollHeight;
+  };
+
+  ["log", "info"].forEach((m) => {
+    const orig = console[m].bind(console);
+    console[m] = function (...args) { append("info", args); orig(...args); };
+  });
+  const origWarn = console.warn.bind(console);
+  console.warn = function (...args) { append("warn", args); origWarn(...args); };
+  const origErr = console.error.bind(console);
+  console.error = function (...args) { append("error", args); origErr(...args); };
+
+  // Captura errores no manejados
+  window.addEventListener("error", (e) => {
+    append("error", ["window.error:", e.message, "@", e.filename + ":" + e.lineno]);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    append("error", ["unhandledrejection:", e.reason && (e.reason.message || e.reason)]);
+  });
+})();
+
+/* ---------------------------------------------------------------
    2. ESTADO Y CONSTANTES
    --------------------------------------------------------------- */
 let currentIndex = 0; // índice del póster actual
@@ -549,4 +590,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Bottom sheet
   document.getElementById("btn-close-sheet").addEventListener("click", closeSheet);
   document.getElementById("sheet-overlay").addEventListener("click", closeSheet);
+
+  // Toggle del panel de debug
+  const dbgBtn = document.getElementById("btn-toggle-debug");
+  if (dbgBtn) {
+    dbgBtn.addEventListener("click", () => {
+      const p = document.getElementById("debug-panel");
+      const collapsed = p.classList.toggle("collapsed");
+      dbgBtn.textContent = collapsed ? "+" : "−";
+    });
+  }
 });

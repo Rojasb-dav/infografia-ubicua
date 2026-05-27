@@ -235,6 +235,64 @@ body.ar-active { background: #000; }
   display: none;
 }
 
+/* ---------- Panel de logs en pantalla ---------- */
+.debug-panel {
+  position: fixed;
+  top: 110px;
+  left: 8px;
+  right: 8px;
+  max-width: 500px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.85);
+  color: #d1fae5;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  z-index: 11;
+  pointer-events: auto;
+  max-height: 40vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-panel.collapsed .debug-log { display: none; }
+
+.debug-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.debug-toggle {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.debug-log {
+  padding: 6px 10px;
+  overflow-y: auto;
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.debug-log .log-line { padding: 2px 0; border-bottom: 1px dotted rgba(255,255,255,0.08); }
+.debug-log .log-error { color: #fca5a5; }
+.debug-log .log-warn  { color: #fde68a; }
+.debug-log .log-info  { color: #d1fae5; }
+
 /* AR.js inserta un canvas/video; nos aseguramos de que llene la pantalla */
 .ar-screen a-scene,
 .ar-screen .a-canvas {
